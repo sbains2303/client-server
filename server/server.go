@@ -1,66 +1,51 @@
+// RPC method is function/procedure that can be invoked on a remote server or service as if it were a local function
 package main
 
 import (
 	"flag"
-	"fmt"
+	"math/rand"
 	"net"
+	"net/rpc"
+	"time"
+	"uk.ac.bris.cs/distributed2/secretstrings/stubs"
 )
 
-type Message struct {
-	sender  int
-	message string
+// Super-Secret `reversing a string' method we can't allow clients to see.
+func ReverseString(s string, i int) string {
+	// Simulate a delay by sleeping for a random duration up to 'i' seconds
+	time.Sleep(time.Duration(rand.Intn(i)) * time.Second)
+	runes := []rune(s)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+	return string(runes)
 }
 
-func handleError(err error) {
-	// TODO: all
-	// Deal with an error event.
-	fmt.Println("Error:", err)
+type SecretStringOperations struct{}
+
+func (s *SecretStringOperations) Reverse(req stubs.Request, res *stubs.Response) (err error) {
+	// Reverse the string in the request and delay the response by up to 10 seconds
+	res.Message = ReverseString(req.Message, 10)
 	return
 }
 
-func acceptConns(ln net.Listener, conns chan net.Conn) {
-	// TODO: all
-	// Continuously accept a network connection from the Listener
-	// and add it to the channel for handling connections.
-
-}
-
-func handleClient(client net.Conn, clientid int, msgs chan Message) {
-	// TODO: all
-	// So long as this connection is alive:
-	// Read in new messages as delimited by '\n's
-	// Tidy up each message and add it to the messages channel,
-	// recording which client it came from.
-
+func (s *SecretStringOperations) FastReverse(req stubs.Request, res *stubs.Response) (err error) {
+	// Reverse the string in the request and respond faster with a delay of up to 2 seconds
+	res.Message = ReverseString(req.Message, 2)
+	return
 }
 
 func main() {
-	// Read in the network port we should listen on, from the commandline argument.
-	// Default to port 8030
-	portPtr := flag.String("port", ":8030", "port to listen on")
+	// Parse command-line arguments to get the port on which the server should listen
+	pAddr := flag.String("port", "8030", "Port to listen on")
 	flag.Parse()
-
-	//TODO Create a Listener for TCP connections on the port given above.
-
-	//Create a channel for connections
-	conns := make(chan net.Conn)
-	//Create a channel for messages
-	msgs := make(chan Message)
-	//Create a mapping of IDs to connections
-	clients := make(map[int]net.Conn)
-
-	//Start accepting connections
-	go acceptConns(ln, conns)
-	for {
-		select {
-		case conn := <-conns:
-			//TODO Deal with a new connection
-			// - assign a client ID
-			// - add the client to the clients channel
-			// - start to asynchronously handle messages from this client
-		case msg := <-msgs:
-			//TODO Deal with a new message
-			// Send the message to all clients that aren't the sender
-		}
-	}
+	// Send random generated number with current time
+	rand.Seed(time.Now().UnixNano())
+	// Register 'SecretStringOperations' struct as an RPC servide
+	rpc.Register(&SecretStringOperations{})
+	// Create TCP listener on specified port
+	listener, _ := net.Listen("tcp", ":"+*pAddr)
+	defer listener.Close()
+	// Accept incoming RPC requests and sever them. The server keeps running and listening for requests
+	rpc.Accept(listener)
 }
