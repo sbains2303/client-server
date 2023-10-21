@@ -7,7 +7,7 @@ import (
 	"net"
 	"net/rpc"
 	"time"
-	"../stubs"
+	"uk.ac.bris.cs/distributed2/secretstrings/stubs"
 )
 
 // Super-Secret `reversing a string' method we can't allow clients to see.
