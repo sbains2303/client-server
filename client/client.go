@@ -4,6 +4,7 @@ import (
 	"flag" // for command line arguments
 	"fmt"
 	"net/rpc"
+	"os"
 	"uk.ac.bris.cs/distributed2/secretstrings/stubs"
 )
 
@@ -16,7 +17,12 @@ func main() {
 	client, _ := rpc.Dial("tcp", *server)
 	defer client.Close()
 
-	request := stubs.Request{Message: "Hello"}
+	dat, err := os.ReadFile("../wordlist")
+	if err != nil {
+		panic(err)
+	}
+
+	request := stubs.Request{Message: string(dat)}
 	// Initialise response structure
 	response := new(stubs.Response)
 	client.Call(stubs.PremiumReverseHandler, request, response)
